@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Stop / Tutti Frutti · Multijugador en vivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --negro:#10002B;
+    --violeta:#7B2CBF;
+    --magenta:#F72585;
+    --cian:#4CC9F0;
+    --amarillo:#FFD60A;
+    --verde:#2CF6B3;
+
+    --bg-panel:#1A0540;
+    --bg-panel-2:#240A52;
+    --bg-panel-3:#33137A;
+
+    --chalk:#F2E9FF;
+    --chalk-dim:#B79DE8;
+    --chalk-faint:rgba(123,44,191,.7);
+
+    --font-display:'Press Start 2P', monospace;
+    --font-body:'Chakra Petch', 'Trebuchet MS', system-ui, sans-serif;
+    --maxw:1080px;
+
+    --glow-cian:0 0 6px rgba(76,201,240,.75);
+    --glow-magenta:0 0 6px rgba(247,37,133,.75);
+    --glow-amarillo:0 0 8px rgba(255,214,10,.65);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; min-height:100vh;
+    background:
+      radial-gradient(ellipse at 50% -20%, rgba(123,44,191,.45), transparent 62%),
+      radial-gradient(ellipse at 12% 110%, rgba(247,37,133,.18), transparent 55%),
+      radial-gradient(ellipse at 88% 100%, rgba(76,201,240,.14), transparent 55%),
+      var(--negro);
+    color:var(--chalk);
+    font-family:var(--font-body);
+    font-size:16px;
+    display:flex; justify-content:center;
+    padding:26px 14px 56px;
+    line-height:1.55;
+  }
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.34) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(0deg, rgba(76,201,240,.05) 0 2px, transparent 2px 4px);
+    mix-blend-mode:overlay; pointer-events:none; z-index:5;
+  }
+  body::after{
+    content:""; position:fixed; inset:0;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
+    pointer-events:none; z-index:4;
+  }
+
+  #app{position:relative; z-index:1; width:100%; max-width:var(--maxw); display:flex; flex-direction:column; gap:20px;}
+  .oculto{display:none !important;}
+  ::selection{background:var(--amarillo); color:var(--negro);}
+  :focus-visible{outline:3px solid var(--amarillo); outline-offset:3px;}
+
+  /* ---------- Encabezado ---------- */
+  .cabecera{
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border:4px solid var(--violeta);
+    background:linear-gradient(180deg, #2A0B63, #150438);
+    box-shadow:0 0 0 4px var(--negro), 0 0 26px rgba(123,44,191,.55), inset 0 0 22px rgba(247,37,133,.18);
+    padding:18px 20px;
+  }
+  .marca{
+    font-family:var(--font-display); font-size:clamp(15px, 3.2vw, 24px); line-height:1.1;
+    letter-spacing:1px; display:flex; gap:3px; flex-wrap:wrap;
+  }
+  .marca span{
+    display:inline-block;
+    text-shadow:0 0 10px currentColor, 3px 3px 0 rgba(16,0,43,.9);
+    animation:cae-pixel .4s steps(4) both;
+  }
+  @keyframes cae-pixel{ from{opacity:0; transform:translateY(-14px);} to{opacity:1; transform:translateY(0);} }
+  .estado-conexion{
+    font-size:12px; font-family:var(--font-display); color:var(--chalk-dim);
+    display:flex; align-items:center; gap:9px; padding:8px 12px;
+    border:2px solid var(--chalk-faint); background:rgba(16,0,43,.75);
+  }
+  .punto{width:10px; height:10px; background:var(--chalk-dim); flex:none;}
+  .punto.on{background:var(--cian); box-shadow:0 0 10px var(--cian); animation:latido 1.4s steps(2) infinite;}
+  .punto.off{background:var(--magenta); box-shadow:0 0 10px var(--magenta);}
+  @keyframes latido{50%{opacity:.35;}}
+
+  /* ---------- Paneles ---------- */
+  .panel{
+    position:relative;
+    background:linear-gradient(180deg, rgba(123,44,191,.16), transparent 42%), linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2));
+    border:4px solid var(--violeta);
+    box-shadow:0 0 0 4px var(--negro), 6px 6px 0 rgba(247,37,133,.32), inset 0 0 24px rgba(123,44,191,.22);
+    padding:24px;
+  }
+  .panel h2{
+    font-family:var(--font-display); font-size:clamp(13px, 2.2vw, 17px); line-height:1.5; margin:0 0 14px;
+    color:var(--amarillo); text-shadow:0 0 12px rgba(255,214,10,.55), 3px 3px 0 rgba(16,0,43,.9);
+  }
+  .subtexto{color:var(--chalk-dim); font-size:15px; margin:0 0 20px; max-width:70ch;}
+
+  .aviso{border:3px solid var(--magenta); background:rgba(247,37,133,.12); color:#FFD9EA; padding:13px 15px; font-size:14px; margin-top:16px;}
+  .aviso code{background:rgba(16,0,43,.8); color:var(--amarillo); padding:1px 5px;}
+  .aviso.info{border-color:var(--cian); background:rgba(76,201,240,.1); color:#D6F2FF;}
+
+  /* ---------- Formularios ---------- */
+  .campo{margin-bottom:18px;}
+  .campo label{display:block; font-family:var(--font-display); font-size:10px; line-height:1.7; color:var(--cian); margin-bottom:9px; letter-spacing:.5px;}
+  input[type="text"], textarea, .select-arcade{
+    width:100%; background:var(--negro); border:3px solid var(--chalk-faint); color:var(--chalk);
+    font-family:var(--font-body); font-weight:600; font-size:16px; padding:12px 13px; outline:none;
+    transition:border-color .12s, box-shadow .12s;
+  }
+  textarea{resize:vertical; min-height:64px; line-height:1.5;}
+  input[type="text"]:focus, textarea:focus, .select-arcade:focus{
+    border-color:var(--amarillo); box-shadow:0 0 0 3px rgba(255,214,10,.22), 0 0 14px rgba(255,214,10,.3);
+  }
+  input::placeholder, textarea::placeholder{color:rgba(183,157,232,.5);}
+  .select-arcade{appearance:none; cursor:pointer;}
+  .select-arcade option{background:var(--bg-panel-2); color:var(--chalk);}
+  .ayuda-campo{font-size:12.5px; color:var(--chalk-dim); margin-top:6px;}
+
+  .paleta-colores{display:flex; gap:12px; flex-wrap:wrap;}
+  .color-op{width:34px; height:34px; border:3px solid rgba(16,0,43,.9); cursor:pointer; padding:0; box-shadow:3px 3px 0 rgba(16,0,43,.9); transition:transform .08s steps(2);}
+  .color-op:hover{transform:translate(-2px,-2px);}
+  .color-op.activo{border-color:var(--chalk); box-shadow:0 0 0 3px var(--amarillo), 0 0 14px rgba(255,214,10,.5);}
+
+  .fila-botones{display:flex; gap:14px; flex-wrap:wrap; margin-top:8px;}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  @media (max-width:720px){ .grid-2{grid-template-columns:1fr;} }
+
+  button{font-family:var(--font-body); cursor:pointer;}
+  .btn{
+    border:3px solid var(--negro); padding:14px 20px; font-family:var(--font-display); font-size:11px; line-height:1.6;
+    color:var(--negro); background:var(--chalk); box-shadow:5px 5px 0 rgba(16,0,43,.9);
+    transition:transform .08s steps(2), box-shadow .08s steps(2), filter .12s;
+  }
+  .btn:hover:not(:disabled){filter:brightness(1.12); transform:translate(-2px,-2px); box-shadow:7px 7px 0 rgba(16,0,43,.9);}
+  .btn:active:not(:disabled){transform:translate(3px,3px); box-shadow:1px 1px 0 rgba(16,0,43,.9);}
+  .btn.primario{background:var(--amarillo); box-shadow:5px 5px 0 rgba(123,44,191,.9);}
+  .btn.acento{background:var(--cian); box-shadow:5px 5px 0 rgba(123,44,191,.9);}
+  .btn.peligro{background:var(--magenta); color:#FFF0F7;}
+  .btn.exito{background:var(--verde); box-shadow:5px 5px 0 rgba(123,44,191,.9);}
+  .btn.fantasma{background:transparent; color:var(--cian); border:3px solid var(--cian); box-shadow:5px 5px 0 rgba(76,201,240,.28);}
+  .btn:disabled{opacity:.35; cursor:not-allowed; box-shadow:none;}
+  .btn-volver{background:none; border:none; color:var(--chalk-dim); font-family:var(--font-display); font-size:10px; display:flex; align-items:center; gap:8px; padding:8px 0;}
+  .btn-volver:hover{color:var(--amarillo);}
+  .btn-stop{
+    font-size:20px; padding:22px 40px; letter-spacing:3px; background:var(--magenta); color:#FFF0F7;
+    box-shadow:6px 6px 0 rgba(16,0,43,.9); animation:pulso-stop 1.6s steps(2) infinite;
+  }
+  @keyframes pulso-stop{50%{box-shadow:6px 6px 0 rgba(16,0,43,.9), 0 0 26px rgba(247,37,133,.85);}}
+
+  .pin-grande{
+    font-family:var(--font-display); font-size:clamp(28px,7vw,46px); letter-spacing:12px; text-align:center;
+    color:var(--amarillo); text-shadow:0 0 18px rgba(255,214,10,.6), 4px 4px 0 rgba(123,44,191,.9);
+    margin:14px 0 8px; padding-left:12px;
+  }
+  .copiar-pin{display:block; margin:0 auto 20px; text-align:center; font-family:var(--font-display); font-size:9px; color:var(--cian); background:none; border:none; padding:6px;}
+  .copiar-pin:hover{color:var(--amarillo);}
+
+  .divisor-o{display:flex; align-items:center; gap:14px; color:var(--magenta); font-family:var(--font-display); font-size:9px; line-height:1.8; text-transform:uppercase; margin:26px 0 18px;}
+  .divisor-o::before, .divisor-o::after{content:""; flex:1; border-top:3px dotted rgba(247,37,133,.5);}
+
+  /* ---------- Lista de jugadores ---------- */
+  .jugadores-lista{display:flex; flex-direction:column; gap:10px; margin:16px 0;}
+  .jugador-item{display:flex; align-items:center; gap:12px; background:rgba(16,0,43,.8); border:3px solid var(--chalk-faint); padding:11px 14px; font-size:15px; font-weight:600;}
+  .avatar-punto{width:28px; height:28px; flex:none; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:10px; color:var(--negro); border:2px solid rgba(16,0,43,.9);}
+  .puntaje-chip{margin-left:auto; font-family:var(--font-display); font-size:11px; color:var(--negro); background:var(--amarillo); padding:5px 9px;}
+  .desconectado{opacity:.4;}
+
+  /* ---------- Letra + temporizador ---------- */
+  .zona-letra{display:flex; flex-direction:column; align-items:center; gap:14px; padding:10px 0 20px;}
+  .letra-label{font-family:var(--font-display); font-size:11px; color:var(--chalk-dim); letter-spacing:2px;}
+  .letra-grande{
+    font-family:var(--font-display); font-size:clamp(60px,14vw,100px); color:var(--amarillo);
+    text-shadow:0 0 26px rgba(255,214,10,.7), 6px 6px 0 rgba(123,44,191,.9); line-height:1;
+  }
+  .letra-grande.girando{animation:girar-letra .12s steps(1) infinite;}
+  @keyframes girar-letra{50%{opacity:.3; transform:scale(.92);}}
+
+  .timer-wrap{width:100%; max-width:420px; margin:0 auto;}
+  .timer-numero{font-family:var(--font-display); font-size:22px; text-align:center; margin-bottom:8px; color:var(--cian); text-shadow:var(--glow-cian);}
+  .timer-numero.urgente{color:var(--magenta); text-shadow:var(--glow-magenta); animation:parpadeo-tiempo .5s steps(2) infinite;}
+  @keyframes parpadeo-tiempo{50%{opacity:.4;}}
+  .timer-barra-fondo{height:20px; background:rgba(16,0,43,.85); border:3px solid var(--chalk-faint); position:relative;}
+  .timer-barra-relleno{height:100%; background:linear-gradient(90deg, var(--cian), var(--verde)); transition:width .2s linear;}
+  .timer-barra-relleno.urgente{background:linear-gradient(90deg, var(--magenta), var(--amarillo));}
+
+  /* ---------- Categorías (formulario de juego) ---------- */
+  .categorias-grid{display:grid; grid-template-columns:1fr; gap:16px; margin-top:22px;}
+  @media (min-width:640px){ .categorias-grid{grid-template-columns:1fr 1fr;} }
+  .campo-categoria label{display:block; font-family:var(--font-display); font-size:10px; color:var(--cian); margin-bottom:8px; letter-spacing:.5px;}
+  .campo-categoria input{font-size:18px;}
+  .campo-categoria input:disabled{opacity:.5; cursor:not-allowed;}
+
+  /* ---------- Comparación de respuestas ---------- */
+  .tabla-comparacion{display:flex; flex-direction:column; gap:22px; margin:18px 0;}
+  .bloque-categoria{border:3px solid var(--chalk-faint); background:rgba(16,0,43,.55); padding:16px;}
+  .bloque-categoria h3{font-family:var(--font-display); font-size:12px; color:var(--amarillo); margin:0 0 12px; text-shadow:2px 2px 0 rgba(16,0,43,.9);}
+  .fila-respuesta{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:8px 0; border-top:1px dashed rgba(123,44,191,.4);}
+  .fila-respuesta:first-child{border-top:none;}
+  .fila-respuesta .autor{font-size:13px; color:var(--chalk-dim); min-width:110px; font-weight:600;}
+  .fila-respuesta .texto-respuesta{flex:1; min-width:120px; font-size:16px; font-weight:600;}
+  .fila-respuesta .texto-respuesta.vacia{color:var(--chalk-faint); font-style:italic; font-weight:400;}
+  .etiqueta-puntos{font-family:var(--font-display); font-size:10px; padding:5px 9px; flex:none;}
+  .etiqueta-puntos.unica{background:var(--verde); color:var(--negro);}
+  .etiqueta-puntos.repetida{background:var(--amarillo); color:var(--negro);}
+  .etiqueta-puntos.nula{background:rgba(123,44,191,.35); color:var(--chalk-dim);}
+  .btn-invalidar{
+    font-family:var(--font-display); font-size:9px; padding:6px 9px; background:transparent; border:2px solid var(--magenta); color:var(--magenta); flex:none;
+  }
+  .btn-invalidar.activo{background:var(--magenta); color:#FFF0F7;}
+
+  .tabla-puntajes{display:flex; flex-direction:column; gap:8px; margin:18px 0;}
+  .fila-puntaje{display:flex; align-items:center; gap:12px; background:rgba(16,0,43,.7); border:3px solid var(--chalk-faint); padding:10px 14px;}
+  .fila-puntaje .puesto{font-family:var(--font-display); font-size:14px; color:var(--amarillo); min-width:26px;}
+  .fila-puntaje .pts{margin-left:auto; font-family:var(--font-display); font-size:14px; color:var(--cian); text-shadow:var(--glow-cian);}
+
+  .banner-resultado{margin-top:10px; padding:16px; text-align:center; font-family:var(--font-display); font-size:12px; line-height:1.8; border:3px solid var(--verde); color:var(--verde); background:rgba(44,246,179,.1);}
+
+  .mensaje-espera{text-align:center; color:var(--chalk-dim); padding:30px 10px; font-size:15px;}
+  .pie-privacidad{text-align:center; font-size:12.5px; color:var(--chalk-dim); opacity:.75; margin-top:8px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important;}
+  }
+</style>
+<!-- ================= FIREBASE (SDK compat) ================= -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <header class="cabecera">
+    <div class="marca" id="marca-titulo"></div>
+    <div class="estado-conexion" id="indicador-conexion">
+      <span class="punto off" id="punto-conexion"></span>
+      <span id="texto-conexion">Modo local (sin conexión)</span>
+    </div>
+  </header>
+
+  <!-- ================= VISTA: INICIO (apodo + crear/unirse sala) ================= -->
+  <section id="vista-inicio" class="panel">
+    <h2>¡Stop! · Tutti Frutti en vivo</h2>
+    <p class="subtexto">Elegí un apodo y un color para identificarte. Podés crear una sala nueva o unirte con el código que te pasó otra persona. No pedimos datos personales.</p>
+
+    <div class="campo">
+      <label for="input-apodo">Tu apodo (visible para el resto)</label>
+      <input type="text" id="input-apodo" maxlength="16" placeholder="Ej: Zorro23, Lupita, Capitán…">
+    </div>
+    <div class="campo">
+      <label>Tu color</label>
+      <div class="paleta-colores" id="paleta-colores"></div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="divisor-o">crear una sala nueva</div>
+        <div class="campo">
+          <label for="input-categorias">Categorías (una por línea o separadas por coma)</label>
+          <textarea id="input-categorias">Nombre, Animal, País, Color, Fruta</textarea>
+          <div class="ayuda-campo">Mínimo 2, máximo 8 categorías.</div>
+        </div>
+        <div class="campo">
+          <label for="select-duracion">Duración de cada ronda</label>
+          <select id="select-duracion" class="select-arcade">
+            <option value="30">30 segundos</option>
+            <option value="45">45 segundos</option>
+            <option value="60" selected>60 segundos</option>
+            <option value="90">90 segundos</option>
+            <option value="120">120 segundos</option>
+          </select>
+        </div>
+        <button class="btn primario" id="btn-crear-sala">Crear sala</button>
+      </div>
+
+      <div>
+        <div class="divisor-o">o unirse con un código</div>
+        <div class="campo">
+          <label for="input-pin">Código de la sala (PIN)</label>
+          <input type="text" id="input-pin" maxlength="4" inputmode="numeric" placeholder="Ej: 4821">
+        </div>
+        <button class="btn acento" id="btn-unirse-sala">Unirse a la sala</button>
+      </div>
+    </div>
+
+    <div class="aviso oculto" id="aviso-inicio"></div>
+    <p class="pie-privacidad">Solo se guarda tu apodo, un color y un identificador anónimo mientras dura la partida.</p>
+  </section>
+
+  <!-- ================= VISTA: SALA DE ESPERA ================= -->
+  <section id="vista-espera" class="oculto">
+    <button class="btn-volver" data-volver>← Salir de la sala</button>
+    <div class="panel" style="margin-top:10px;">
+      <h2>Sala de espera</h2>
+      <div class="pin-grande" id="pin-mostrado"></div>
+      <button class="copiar-pin" id="btn-copiar-pin">Copiar código</button>
+
+      <div class="jugadores-lista" id="lista-jugadores-espera"></div>
+
+      <div class="divisor-o">categorías de esta partida</div>
+      <p class="subtexto" id="categorias-mostradas" style="margin-bottom:8px;"></p>
+      <p class="subtexto">⏱ Duración por ronda: <b id="duracion-mostrada"></b> segundos</p>
+
+      <div class="fila-botones" style="margin-top:10px;">
+        <button class="btn primario" id="btn-iniciar-ronda">🔤 Iniciar ronda</button>
+      </div>
+      <div class="aviso oculto" id="aviso-espera"></div>
+    </div>
+  </section>
+
+  <!-- ================= VISTA: JUGANDO ================= -->
+  <section id="vista-juego" class="oculto">
+    <div class="panel">
+      <h2 id="titulo-ronda"></h2>
+
+      <div class="zona-letra">
+        <div class="letra-label">LA LETRA ES</div>
+        <div class="letra-grande" id="letra-grande">–</div>
+      </div>
+
+      <div class="timer-wrap">
+        <div class="timer-numero" id="timer-numero">--</div>
+        <div class="timer-barra-fondo"><div class="timer-barra-relleno" id="timer-barra"></div></div>
+      </div>
+
+      <div class="categorias-grid" id="categorias-grid"></div>
+
+      <div class="fila-botones" style="justify-content:center; margin-top:26px;">
+        <button class="btn btn-stop" id="btn-stop">¡STOP!</button>
+      </div>
+      <p class="subtexto" style="text-align:center; margin-top:14px;" id="texto-stop-info"></p>
+    </div>
+  </section>
+
+  <!-- ================= VISTA: RESULTADOS / COMPARACIÓN ================= -->
+  <section id="vista-resultados" class="oculto">
+    <div class="panel">
+      <h2>Resultados de la ronda</h2>
+      <p class="subtexto">Marcá "no vale" en cualquier respuesta que el grupo considere inválida (no empieza con la letra, está inventada, etc.). Los puntajes se recalculan solos: <b>10</b> pts si nadie más puso lo mismo, <b>5</b> pts si se repite con otro jugador, <b>0</b> si está vacía, no empieza con la letra o fue invalidada.</p>
+      <div class="tabla-comparacion" id="tabla-comparacion"></div>
+
+      <div id="zona-confirmar">
+        <button class="btn exito" id="btn-confirmar-puntajes">✅ Confirmar y sumar puntos</button>
+      </div>
+      <div class="banner-resultado oculto" id="banner-confirmado">🏁 ¡Puntajes sumados al marcador!</div>
+
+      <div class="divisor-o">marcador general</div>
+      <div class="tabla-puntajes" id="tabla-puntajes"></div>
+
+      <div class="fila-botones" style="margin-top:10px;">
+        <button class="btn primario oculto" id="btn-otra-ronda">🔁 Jugar otra ronda</button>
+        <button class="btn fantasma" id="btn-salir-resultados">Salir de la sala</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* =====================================================================
+
+   PEGÁ ACÁ TU CONFIGURACIÓN DE FIREBASE
+   (la obtenés en la consola de Firebase: Configuración del proyecto
+   → Tus apps → Configuración del SDK)
+
+   Si ya usás Firebase para otro juego (por ejemplo el Ahorcado), podés
+   reutilizar el MISMO proyecto: este juego guarda todo bajo el nodo
+   raíz "salasStop", así que no choca con datos de otros juegos.
+
+   Reglas de Realtime Database sugeridas para este juego (agregalas
+   junto a las que ya tengas, no las reemplaces si ya tenés otro nodo
+   como "salas" del Ahorcado):
+
+   {
+     "rules": {
+       "salasStop": {
+         ".read": "auth != null",
+         ".write": "auth != null"
+       }
+     }
+   }
+
+   Recordá siempre apretar "Publish" en la consola después de pegar
+   las reglas — si no, quedan como borrador y no se aplican.
+===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBAEhC1du0ZLQoKxpsoUfz-nzrBAq6r4y4",
+  authDomain: "tutifruti-retro.firebaseapp.com",
+  databaseURL: "https://tutifruti-retro-default-rtdb.firebaseio.com",
+  projectId: "tutifruti-retro",
+  storageBucket: "tutifruti-retro.firebasestorage.app",
+  messagingSenderId: "414448797886",
+  appId: "1:414448797886:web:2c722c0c13b25e69da76ef"
+};
+</script>
+
+<script>
+/* =====================================================================
+   STOP / TUTTI FRUTTI EN VIVO — lógica de la aplicación
+
+   Estructura de datos en Firebase (nodo raíz "salasStop"):
+
+   salasStop/{pin} = {
+     creadoEn, estado: "esperando" | "jugando" | "comparando",
+     categorias: ["Nombre","Animal",...],   // tal cual las escribió quien creó la sala
+     duracionRonda: 60,                     // segundos
+     letraActual: "M",
+     rondaNum: 1,
+     inicioRonda: <server timestamp>,       // solo mientras estado === "jugando"
+     quienPidioStop: null | uid,
+     puntosConfirmados: false,
+     jugadores: { uid: {apodo,color,conectado,puntajeTotal} },
+     respuestas: { uid: { "0": "texto", "1": "texto", ... } },  // índice = categoría
+     invalidas:  { uid: { "0": true, ... } }                    // marcado manual "no vale"
+   }
+
+   Índice de secciones:
+     1. Utilidades generales
+     2. Navegación de vistas
+     3. Firebase: inicialización + autenticación anónima
+     4. Crear / unirse a sala
+     5. Escucha en tiempo real + enrutamiento por estado
+     6. Sala de espera
+     7. Ronda en juego (letra, temporizador, respuestas)
+     8. Resultados, puntajes y siguiente ronda
+===================================================================== */
+
+/* ---------------------- 1. Utilidades generales ---------------------- */
+
+const RAIZ = "salasStop";
+const LETRAS_DISPONIBLES = "ABCDEFGHIJKLMNÑOPQRSTUVYZ".split(""); // se excluyen W y X: casi no hay palabras
+const CATEGORIAS_POR_DEFECTO = "Nombre, Animal, País, Color, Fruta";
+const MIN_CATEGORIAS = 2;
+const MAX_CATEGORIAS = 8;
+
+const PALETA = [
+  {nombre:"magenta", hex:"#F72585"},
+  {nombre:"cian", hex:"#4CC9F0"},
+  {nombre:"amarillo", hex:"#FFD60A"},
+  {nombre:"violeta", hex:"#9D4EDD"},
+  {nombre:"verde", hex:"#2CF6B3"},
+  {nombre:"naranja", hex:"#FF6B35"}
+];
+
+function normalizarTexto(txt){
+  return (txt || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // saca tildes para comparar
+    .replace(/\s+/g, " ");
+}
+
+function generarPin(){
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+function letraAlAzar(excluir){
+  let letra;
+  do{
+    letra = LETRAS_DISPONIBLES[Math.floor(Math.random() * LETRAS_DISPONIBLES.length)];
+  } while(LETRAS_DISPONIBLES.length > 1 && letra === excluir);
+  return letra;
+}
+
+function parsearCategorias(texto){
+  const partes = texto.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+  const vistas = new Set();
+  const limpias = [];
+  partes.forEach(p=>{
+    const clave = normalizarTexto(p);
+    if(clave && !vistas.has(clave)){
+      vistas.add(clave);
+      limpias.push(p.slice(0, 30));
+    }
+  });
+  return limpias.slice(0, MAX_CATEGORIAS);
+}
+
+function debounce(fn, espera){
+  let t = null;
+  return function(...args){
+    clearTimeout(t);
+    t = setTimeout(()=> fn.apply(this, args), espera);
+  };
+}
+
+/* ------------------------- 2. Navegación de vistas ---------------------- */
+
+const VISTAS = ["vista-inicio","vista-espera","vista-juego","vista-resultados"];
+function mostrarVista(id){
+  VISTAS.forEach(v => document.getElementById(v).classList.toggle("oculto", v !== id));
+}
+
+document.querySelectorAll("[data-volver]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{ salirDeSala(true); });
+});
+document.getElementById("btn-salir-resultados").addEventListener("click", ()=> salirDeSala(true));
+
+// título animado letra por letra, tipo "escrito con tiza"
+(function animarTitulo(){
+  const texto = "¡STOP!";
+  const cont = document.getElementById("marca-titulo");
+  texto.split("").forEach((ch,i)=>{
+    const span = document.createElement("span");
+    span.textContent = ch;
+    span.style.animationDelay = (i*0.05)+"s";
+    const tonos = ["var(--cian)", "var(--magenta)", "var(--amarillo)"];
+    span.style.color = tonos[i % tonos.length];
+    cont.appendChild(span);
+  });
+})();
+
+/* ============================================================
+   3. FIREBASE — inicialización y autenticación anónima
+============================================================ */
+
+let db = null;
+let auth = null;
+let uidActual = null;
+let firebaseListo = false;
+let offsetServidorMs = 0;
+
+function firebaseConfigEsPlaceholder(){
+  return !firebaseConfig.apiKey || firebaseConfig.apiKey.includes("TU_")
+      || !firebaseConfig.databaseURL || firebaseConfig.databaseURL.includes("TU_PROYECTO");
+}
+
+function marcarConexion(activa, texto){
+  document.getElementById("punto-conexion").className = "punto " + (activa ? "on" : "off");
+  document.getElementById("texto-conexion").textContent = texto;
+}
+
+function mostrarAviso(idEl, mensaje, esError){
+  const el = document.getElementById(idEl);
+  el.classList.remove("oculto");
+  el.classList.toggle("aviso", true);
+  el.classList.toggle("info", !esError);
+  el.textContent = mensaje;
+}
+function ocultarAviso(idEl){
+  document.getElementById(idEl).classList.add("oculto");
+}
+
+function inicializarFirebase(){
+  if(firebaseConfigEsPlaceholder()){
+    marcarConexion(false, "Firebase sin configurar");
+    mostrarAviso("aviso-inicio", "⚠️ Todavía no configuraste Firebase. Completá el bloque firebaseConfig al principio del archivo HTML para poder jugar en vivo con otras personas.", true);
+    document.getElementById("btn-crear-sala").disabled = true;
+    document.getElementById("btn-unirse-sala").disabled = true;
+    return;
+  }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.database();
+
+    db.ref(".info/serverTimeOffset").on("value", snap=>{
+      offsetServidorMs = snap.val() || 0;
+    });
+
+    auth.onAuthStateChanged(user=>{
+      if(user){
+        uidActual = user.uid;
+        firebaseListo = true;
+        marcarConexion(true, "Conectado en vivo");
+      } else {
+        auth.signInAnonymously().catch(err=>{
+          marcarConexion(false, "Error de conexión");
+          mostrarAviso("aviso-inicio", "No se pudo iniciar sesión anónima: " + err.message, true);
+        });
+      }
+    });
+  } catch(err){
+    marcarConexion(false, "Error al iniciar Firebase");
+    mostrarAviso("aviso-inicio", "Revisá el bloque firebaseConfig: " + err.message, true);
+    document.getElementById("btn-crear-sala").disabled = true;
+    document.getElementById("btn-unirse-sala").disabled = true;
+  }
+}
+
+function ahoraServidor(){
+  return Date.now() + offsetServidorMs;
+}
+
+inicializarFirebase();
+
+/* ------------------------------ Estado local ------------------------------ */
+
+const mp = {
+  pinActual:null,
+  apodo:"",
+  color:PALETA[0].hex,
+  desuscribir:null,
+  salaActual:null,          // último snapshot recibido de la sala
+  letraPrevia:null,         // para animar el cambio de letra
+  intervaloTimer:null,
+  yaCerroPorTiempo:false
+};
+
+// --- Paleta de colores ---
+(function construirPaleta(){
+  const cont = document.getElementById("paleta-colores");
+  PALETA.forEach((c,i)=>{
+    const b = document.createElement("button");
+    b.className = "color-op" + (i===0 ? " activo" : "");
+    b.style.background = c.hex;
+    b.type = "button";
+    b.addEventListener("click", ()=>{
+      document.querySelectorAll(".color-op").forEach(x=>x.classList.remove("activo"));
+      b.classList.add("activo");
+      mp.color = c.hex;
+    });
+    cont.appendChild(b);
+  });
+})();
+
+function apodoValido(){
+  const val = document.getElementById("input-apodo").value.trim();
+  if(val.length < 2){
+    mostrarAviso("aviso-inicio", "Elegí un apodo de al menos 2 caracteres.", true);
+    return null;
+  }
+  return val.slice(0,16);
+}
+
+/* ============================================================
+   4. Crear / unirse a sala
+============================================================ */
+
+document.getElementById("btn-crear-sala").addEventListener("click", async ()=>{
+  if(!firebaseListo){ mostrarAviso("aviso-inicio","Todavía se está conectando, esperá un segundo…", true); return; }
+  const apodo = apodoValido();
+  if(!apodo) return;
+
+  const categorias = parsearCategorias(document.getElementById("input-categorias").value || CATEGORIAS_POR_DEFECTO);
+  if(categorias.length < MIN_CATEGORIAS){
+    mostrarAviso("aviso-inicio", `Escribí al menos ${MIN_CATEGORIAS} categorías (separadas por coma o una por línea).`, true);
+    return;
+  }
+  const duracion = parseInt(document.getElementById("select-duracion").value, 10) || 60;
+
+  ocultarAviso("aviso-inicio");
+  mp.apodo = apodo;
+
+  try{
+    let pin, existe = true, intentos = 0;
+    do{
+      pin = generarPin();
+      const snap = await db.ref(`${RAIZ}/${pin}`).once("value");
+      existe = snap.exists();
+      intentos++;
+    } while(existe && intentos < 8);
+
+    mp.pinActual = pin;
+
+    const datosSala = {
+      creadoEn: firebase.database.ServerValue.TIMESTAMP,
+      estado: "esperando",
+      categorias: categorias,
+      duracionRonda: duracion,
+      letraActual: null,
+      rondaNum: 0,
+      inicioRonda: null,
+      quienPidioStop: null,
+      puntosConfirmados: false,
+      jugadores: {
+        [uidActual]: { apodo: mp.apodo, color: mp.color, conectado: true, puntajeTotal: 0 }
+      }
+    };
+
+    await db.ref(`${RAIZ}/${pin}`).set(datosSala);
+    configurarDesconexion(pin);
+    entrarASala(pin);
+  } catch(err){
+    mostrarAviso("aviso-inicio", "No se pudo crear la sala: " + err.message, true);
+  }
+});
+
+document.getElementById("btn-unirse-sala").addEventListener("click", async ()=>{
+  if(!firebaseListo){ mostrarAviso("aviso-inicio","Todavía se está conectando, esperá un segundo…", true); return; }
+  const apodo = apodoValido();
+  if(!apodo) return;
+  const pin = document.getElementById("input-pin").value.trim();
+  if(!/^\d{4}$/.test(pin)){
+    mostrarAviso("aviso-inicio", "El código de sala tiene 4 números.", true);
+    return;
+  }
+  ocultarAviso("aviso-inicio");
+  mp.apodo = apodo;
+
+  try{
+    const snap = await db.ref(`${RAIZ}/${pin}`).once("value");
+    if(!snap.exists()){
+      mostrarAviso("aviso-inicio", "No existe ninguna sala con ese código.", true);
+      return;
+    }
+    mp.pinActual = pin;
+    await db.ref(`${RAIZ}/${pin}/jugadores/${uidActual}`).set({
+      apodo: mp.apodo, color: mp.color, conectado: true, puntajeTotal: 0
+    });
+    configurarDesconexion(pin);
+    entrarASala(pin);
+  } catch(err){
+    mostrarAviso("aviso-inicio", "No se pudo unir a la sala: " + err.message, true);
+  }
+});
+
+function configurarDesconexion(pin){
+  const refJugador = db.ref(`${RAIZ}/${pin}/jugadores/${uidActual}/conectado`);
+  refJugador.onDisconnect().set(false);
+}
+
+function entrarASala(pin){
+  document.getElementById("pin-mostrado").textContent = pin;
+  suscribirseASala(pin);
+}
+
+document.getElementById("btn-copiar-pin").addEventListener("click", ()=>{
+  navigator.clipboard?.writeText(mp.pinActual || "");
+  const b = document.getElementById("btn-copiar-pin");
+  const original = b.textContent;
+  b.textContent = "¡Copiado!";
+  setTimeout(()=> b.textContent = original, 1200);
+});
+
+async function salirDeSala(volverAlInicio){
+  if(mp.intervaloTimer){ clearInterval(mp.intervaloTimer); mp.intervaloTimer = null; }
+  if(mp.desuscribir){ mp.desuscribir(); mp.desuscribir = null; }
+  if(mp.pinActual && uidActual){
+    try{
+      const refJug = db.ref(`${RAIZ}/${mp.pinActual}/jugadores/${uidActual}`);
+      await refJug.remove();
+      const snap = await db.ref(`${RAIZ}/${mp.pinActual}/jugadores`).once("value");
+      if(!snap.exists()){
+        await db.ref(`${RAIZ}/${mp.pinActual}`).remove();
+      }
+    } catch(e){ /* la sala puede haberse borrado ya; no pasa nada */ }
+  }
+  mp.pinActual = null;
+  mp.salaActual = null;
+  mp.letraPrevia = null;
+  mp.yaCerroPorTiempo = false;
+  if(volverAlInicio) mostrarVista("vista-inicio");
+}
+
+/* ============================================================
+   5. Escucha en tiempo real + enrutamiento por estado
+============================================================ */
+
+function suscribirseASala(pin){
+  if(mp.desuscribir) mp.desuscribir();
+  const refSala = db.ref(`${RAIZ}/${pin}`);
+  const callback = snap => {
+    if(!snap.exists()){
+      mostrarAviso("aviso-espera", "La sala se cerró.", true);
+      setTimeout(()=>{ mp.pinActual=null; mostrarVista("vista-inicio"); }, 1500);
+      return;
+    }
+    mp.salaActual = snap.val();
+    renderEstadoSala(pin, mp.salaActual);
+  };
+  refSala.on("value", callback);
+  mp.desuscribir = ()=> refSala.off("value", callback);
+}
+
+function renderEstadoSala(pin, sala){
+  if(sala.estado === "jugando"){
+    mostrarVista("vista-juego");
+    renderVistaJuego(pin, sala);
+  } else if(sala.estado === "comparando"){
+    if(mp.intervaloTimer){ clearInterval(mp.intervaloTimer); mp.intervaloTimer = null; }
+    mostrarVista("vista-resultados");
+    renderVistaResultados(pin, sala);
+  } else {
+    if(mp.intervaloTimer){ clearInterval(mp.intervaloTimer); mp.intervaloTimer = null; }
+    mostrarVista("vista-espera");
+    renderVistaEspera(pin, sala);
+  }
+}
+
+function renderListaJugadores(contenedorId, sala, mostrarPuntaje){
+  const cont = document.getElementById(contenedorId);
+  cont.innerHTML = "";
+  const jugadores = sala.jugadores || {};
+  Object.entries(jugadores).forEach(([uid, j])=>{
+    const div = document.createElement("div");
+    div.className = "jugador-item" + (j.conectado === false ? " desconectado" : "");
+    const inicial = (j.apodo||"?").charAt(0).toUpperCase();
+    div.innerHTML = `
+      <div class="avatar-punto" style="background:${j.color}">${inicial}</div>
+      <span>${j.apodo}${uid === uidActual ? " (vos)" : ""}</span>
+      ${mostrarPuntaje ? `<span class="puntaje-chip">${j.puntajeTotal || 0} pts</span>` : ""}
+    `;
+    cont.appendChild(div);
+  });
+}
+
+/* ============================================================
+   6. Sala de espera
+============================================================ */
+
+function renderVistaEspera(pin, sala){
+  renderListaJugadores("lista-jugadores-espera", sala, true);
+  document.getElementById("categorias-mostradas").textContent = (sala.categorias || []).join(" · ");
+  document.getElementById("duracion-mostrada").textContent = sala.duracionRonda || 60;
+}
+
+document.getElementById("btn-iniciar-ronda").addEventListener("click", async ()=>{
+  if(!mp.pinActual || !mp.salaActual) return;
+  try{
+    const letra = letraAlAzar(mp.salaActual.letraActual);
+    await db.ref(`${RAIZ}/${mp.pinActual}`).update({
+      estado: "jugando",
+      letraActual: letra,
+      rondaNum: (mp.salaActual.rondaNum || 0) + 1,
+      inicioRonda: firebase.database.ServerValue.TIMESTAMP,
+      quienPidioStop: null,
+      puntosConfirmados: false,
+      respuestas: null,
+      invalidas: null
+    });
+  } catch(err){
+    mostrarAviso("aviso-espera", "No se pudo iniciar la ronda: " + err.message, true);
+  }
+});
+
+/* ============================================================
+   7. Ronda en juego (letra, temporizador, respuestas)
+============================================================ */
+
+function renderVistaJuego(pin, sala){
+  document.getElementById("titulo-ronda").textContent = "Ronda " + (sala.rondaNum || 1);
+
+  // letra grande, con una animación corta cuando cambia
+  const letraEl = document.getElementById("letra-grande");
+  if(sala.letraActual !== mp.letraPrevia){
+    mp.letraPrevia = sala.letraActual;
+    letraEl.classList.add("girando");
+    let vueltas = 0;
+    const spin = setInterval(()=>{
+      letraEl.textContent = LETRAS_DISPONIBLES[Math.floor(Math.random()*LETRAS_DISPONIBLES.length)];
+      vueltas++;
+      if(vueltas > 7){
+        clearInterval(spin);
+        letraEl.textContent = sala.letraActual;
+        letraEl.classList.remove("girando");
+      }
+    }, 60);
+  } else {
+    letraEl.textContent = sala.letraActual;
+  }
+
+  // categorías: se construyen una sola vez por ronda
+  const grid = document.getElementById("categorias-grid");
+  if(grid.dataset.ronda !== String(sala.rondaNum)){
+    grid.dataset.ronda = String(sala.rondaNum);
+    grid.innerHTML = "";
+    (sala.categorias || []).forEach((cat, i)=>{
+      const wrap = document.createElement("div");
+      wrap.className = "campo-categoria";
+      wrap.innerHTML = `<label>${cat}</label><input type="text" maxlength="30" data-indice="${i}" autocomplete="off">`;
+      grid.appendChild(wrap);
+    });
+    grid.querySelectorAll("input").forEach(inp=>{
+      const guardar = debounce(()=>{
+        const i = inp.dataset.indice;
+        db.ref(`${RAIZ}/${pin}/respuestas/${uidActual}/${i}`).set(inp.value).catch(console.error);
+      }, 350);
+      inp.addEventListener("input", guardar);
+    });
+    // si ya había respuestas guardadas (por ejemplo al recargar la página), las precarga
+    const misRespuestas = (sala.respuestas && sala.respuestas[uidActual]) || {};
+    grid.querySelectorAll("input").forEach(inp=>{
+      const val = misRespuestas[inp.dataset.indice];
+      if(val) inp.value = val;
+    });
+  }
+  const puedoEscribir = sala.estado === "jugando";
+  grid.querySelectorAll("input").forEach(inp=> inp.disabled = !puedoEscribir);
+
+  // temporizador sincronizado por servidor
+  actualizarTemporizador(pin, sala);
+  if(!mp.intervaloTimer){
+    mp.yaCerroPorTiempo = false;
+    mp.intervaloTimer = setInterval(()=> actualizarTemporizador(pin, mp.salaActual), 200);
+  }
+
+  const alguienPidioStop = !!sala.quienPidioStop;
+  document.getElementById("texto-stop-info").textContent = alguienPidioStop
+    ? "¡Alguien ya gritó STOP! Cerrando la ronda…"
+    : "Apretá STOP en cuanto completes todo (o esperá a que se acabe el tiempo).";
+}
+
+function actualizarTemporizador(pin, sala){
+  if(!sala || sala.estado !== "jugando" || !sala.inicioRonda) return;
+  const duracion = sala.duracionRonda || 60;
+  const transcurrido = (ahoraServidor() - sala.inicioRonda) / 1000;
+  const restante = Math.max(0, duracion - transcurrido);
+  const pct = Math.max(0, Math.min(100, (restante / duracion) * 100));
+
+  const numEl = document.getElementById("timer-numero");
+  const barraEl = document.getElementById("timer-barra");
+  const urgente = restante <= 10;
+  numEl.textContent = Math.ceil(restante) + "s";
+  numEl.classList.toggle("urgente", urgente);
+  barraEl.style.width = pct + "%";
+  barraEl.classList.toggle("urgente", urgente);
+
+  if(restante <= 0 && !mp.yaCerroPorTiempo){
+    mp.yaCerroPorTiempo = true;
+    cerrarRondaPorTiempo(pin);
+  }
+}
+
+async function cerrarRondaPorTiempo(pin){
+  try{
+    await db.ref(`${RAIZ}/${pin}/estado`).transaction(actual => actual === "jugando" ? "comparando" : undefined);
+  } catch(err){ console.error(err); }
+}
+
+document.getElementById("btn-stop").addEventListener("click", async ()=>{
+  if(!mp.pinActual) return;
+  try{
+    await db.ref(`${RAIZ}/${mp.pinActual}/quienPidioStop`).transaction(actual => actual === null ? uidActual : undefined);
+    await db.ref(`${RAIZ}/${mp.pinActual}/estado`).transaction(actual => actual === "jugando" ? "comparando" : undefined);
+  } catch(err){ console.error(err); }
+});
+
+/* ============================================================
+   8. Resultados, puntajes y siguiente ronda
+============================================================ */
+
+// Calcula, a partir del estado actual de la sala, los puntos de cada
+// jugador en cada categoría (10 = única, 5 = repetida, 0 = inválida).
+function calcularPuntosRonda(sala){
+  const categorias = sala.categorias || [];
+  const letra = normalizarTexto(sala.letraActual || "").charAt(0);
+  const jugadores = Object.keys(sala.jugadores || {});
+  const respuestas = sala.respuestas || {};
+  const invalidas = sala.invalidas || {};
+
+  // puntosPorCategoria[i][uid] = {texto, valida, puntos}
+  const detalle = categorias.map((_, i)=>{
+    const normalizadas = {}; // uid -> texto normalizado (solo si es válida)
+    jugadores.forEach(uid=>{
+      const texto = (respuestas[uid] && respuestas[uid][i]) || "";
+      const marcadaInvalida = !!(invalidas[uid] && invalidas[uid][i]);
+      const empiezaBien = normalizarTexto(texto).charAt(0) === letra && letra.length > 0;
+      const valida = texto.trim().length > 0 && empiezaBien && !marcadaInvalida;
+      if(valida) normalizadas[uid] = normalizarTexto(texto);
+    });
+    // contar repeticiones entre respuestas válidas
+    const conteo = {};
+    Object.values(normalizadas).forEach(txt=>{ conteo[txt] = (conteo[txt]||0) + 1; });
+
+    const porJugador = {};
+    jugadores.forEach(uid=>{
+      const texto = (respuestas[uid] && respuestas[uid][i]) || "";
+      const marcadaInvalida = !!(invalidas[uid] && invalidas[uid][i]);
+      const esValida = normalizadas.hasOwnProperty(uid);
+      let puntos = 0;
+      if(esValida) puntos = conteo[normalizadas[uid]] > 1 ? 5 : 10;
+      porJugador[uid] = { texto, valida: esValida, invalidaManual: marcadaInvalida, puntos, repetida: esValida && conteo[normalizadas[uid]] > 1 };
+    });
+    return porJugador;
+  });
+
+  const totalesPorJugador = {};
+  jugadores.forEach(uid=>{
+    totalesPorJugador[uid] = detalle.reduce((acc, cat)=> acc + (cat[uid] ? cat[uid].puntos : 0), 0);
+  });
+
+  return { detalle, totalesPorJugador };
+}
+
+function renderVistaResultados(pin, sala){
+  const { detalle, totalesPorJugador } = calcularPuntosRonda(sala);
+  const jugadores = sala.jugadores || {};
+  const categorias = sala.categorias || [];
+
+  // tabla de comparación por categoría
+  const cont = document.getElementById("tabla-comparacion");
+  cont.innerHTML = "";
+  categorias.forEach((cat, i)=>{
+    const bloque = document.createElement("div");
+    bloque.className = "bloque-categoria";
+    const titulo = document.createElement("h3");
+    titulo.textContent = cat;
+    bloque.appendChild(titulo);
+
+    Object.keys(jugadores).forEach(uid=>{
+      const info = detalle[i][uid] || {texto:"", valida:false, invalidaManual:false, puntos:0, repetida:false};
+      const fila = document.createElement("div");
+      fila.className = "fila-respuesta";
+
+      const autor = document.createElement("span");
+      autor.className = "autor";
+      autor.textContent = jugadores[uid].apodo + (uid === uidActual ? " (vos)" : "");
+      fila.appendChild(autor);
+
+      const texto = document.createElement("span");
+      texto.className = "texto-respuesta" + (info.texto.trim() ? "" : " vacia");
+      texto.textContent = info.texto.trim() ? info.texto : "(vacío)";
+      fila.appendChild(texto);
+
+      const etiqueta = document.createElement("span");
+      if(info.valida){
+        etiqueta.className = "etiqueta-puntos " + (info.repetida ? "repetida" : "unica");
+        etiqueta.textContent = (info.repetida ? "5 pts · repetida" : "10 pts · única");
+      } else {
+        etiqueta.className = "etiqueta-puntos nula";
+        etiqueta.textContent = "0 pts";
+      }
+      fila.appendChild(etiqueta);
+
+      const btnInvalidar = document.createElement("button");
+      btnInvalidar.className = "btn-invalidar" + (info.invalidaManual ? " activo" : "");
+      btnInvalidar.textContent = info.invalidaManual ? "Invalidada" : "No vale";
+      btnInvalidar.disabled = sala.puntosConfirmados === true;
+      btnInvalidar.addEventListener("click", ()=>{
+        db.ref(`${RAIZ}/${pin}/invalidas/${uid}/${i}`).set(!info.invalidaManual).catch(console.error);
+      });
+      fila.appendChild(btnInvalidar);
+
+      bloque.appendChild(fila);
+    });
+
+    cont.appendChild(bloque);
+  });
+
+  // confirmar puntajes
+  const zonaConfirmar = document.getElementById("zona-confirmar");
+  const bannerConfirmado = document.getElementById("banner-confirmado");
+  const btnOtraRonda = document.getElementById("btn-otra-ronda");
+  if(sala.puntosConfirmados){
+    zonaConfirmar.classList.add("oculto");
+    bannerConfirmado.classList.remove("oculto");
+    btnOtraRonda.classList.remove("oculto");
+  } else {
+    zonaConfirmar.classList.remove("oculto");
+    bannerConfirmado.classList.add("oculto");
+    btnOtraRonda.classList.add("oculto");
+  }
+
+  // marcador general (si ya se confirmó, puntajeTotal ya incluye esta ronda;
+  // si no, se muestra el total actual + lo que sumaría esta ronda, aclarado aparte)
+  const tablaPuntajes = document.getElementById("tabla-puntajes");
+  tablaPuntajes.innerHTML = "";
+  const filas = Object.entries(jugadores).map(([uid, j])=>({
+    uid, apodo: j.apodo, color: j.color,
+    total: (j.puntajeTotal || 0) + (sala.puntosConfirmados ? 0 : (totalesPorJugador[uid] || 0))
+  })).sort((a,b)=> b.total - a.total);
+
+  filas.forEach((f, idx)=>{
+    const fila = document.createElement("div");
+    fila.className = "fila-puntaje";
+    const medallas = ["🥇","🥈","🥉"];
+    fila.innerHTML = `
+      <span class="puesto">${medallas[idx] || (idx+1)+"°"}</span>
+      <div class="avatar-punto" style="background:${f.color}">${f.apodo.charAt(0).toUpperCase()}</div>
+      <span>${f.apodo}${f.uid === uidActual ? " (vos)" : ""}</span>
+      <span class="pts">${f.total} pts</span>
+    `;
+    tablaPuntajes.appendChild(fila);
+  });
+}
+
+document.getElementById("btn-confirmar-puntajes").addEventListener("click", async ()=>{
+  if(!mp.pinActual || !mp.salaActual) return;
+  const btn = document.getElementById("btn-confirmar-puntajes");
+  btn.disabled = true;
+  try{
+    // Transacción atómica: solo el primer clic que llega "gana" y hace la suma,
+    // así evitamos sumar los puntos dos veces si varias personas confirman a la vez.
+    const resultado = await db.ref(`${RAIZ}/${mp.pinActual}/puntosConfirmados`).transaction(actual => actual ? undefined : true);
+    if(resultado.committed){
+      const snap = await db.ref(`${RAIZ}/${mp.pinActual}`).once("value");
+      const sala = snap.val();
+      const { totalesPorJugador } = calcularPuntosRonda(sala);
+      const actualizacion = {};
+      Object.keys(sala.jugadores || {}).forEach(uid=>{
+        const actual = (sala.jugadores[uid].puntajeTotal || 0);
+        actualizacion[`jugadores/${uid}/puntajeTotal`] = actual + (totalesPorJugador[uid] || 0);
+      });
+      await db.ref(`${RAIZ}/${mp.pinActual}`).update(actualizacion);
+    }
+  } catch(err){
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("btn-otra-ronda").addEventListener("click", async ()=>{
+  if(!mp.pinActual || !mp.salaActual) return;
+  try{
+    const letra = letraAlAzar(mp.salaActual.letraActual);
+    await db.ref(`${RAIZ}/${mp.pinActual}`).update({
+      estado: "jugando",
+      letraActual: letra,
+      rondaNum: (mp.salaActual.rondaNum || 0) + 1,
+      inicioRonda: firebase.database.ServerValue.TIMESTAMP,
+      quienPidioStop: null,
+      puntosConfirmados: false,
+      respuestas: null,
+      invalidas: null
+    });
+  } catch(err){ console.error(err); }
+});
+</script>
+</body>
+</html>
